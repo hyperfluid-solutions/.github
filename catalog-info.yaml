@@ -17,6 +17,8 @@ kind: Domain
 metadata:
   name: hyperfluid
   description: Everything directly under Hyperfluid Solutions
+  annotations:
+    backstage.io/techdocs-ref: dir:./public-docs
 spec:
   owner: hyperfluid
 ---
@@ -28,4 +30,3 @@ spec:
   type: url
   targets:
     - https://github.com/hyperfluid-solutions/hfs/blob/main/catalog-info.yaml # Private catalog sprawl
----
