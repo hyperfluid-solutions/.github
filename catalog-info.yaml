@@ -1,1 +1,31 @@
 ---
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: hyperfluid
+  description: Hyperfluid devs
+spec:
+  type: business-unit
+  profile:
+    displayName: Hyperfluid
+    email: info@hyperfluidsolutions.com
+    picture: https://avatars.githubusercontent.com/u/17110619
+  children: [systmms]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Domain
+metadata:
+  name: Hyperfluid Projects
+  description: Everything directly under Hyperfluid Solutions
+spec:
+  owner: hyperfluid
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: hyperfluid-github-locations
+spec:
+  type: url
+  targets:
+    - https://github.com/hyperfluid-solutions/hfs/blob/main/catalog-info.yaml # Private catalog sprawl
+---
