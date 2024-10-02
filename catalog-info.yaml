@@ -15,7 +15,7 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: Domain
 metadata:
-  name: Hyperfluid Projects
+  name: hyperfluid
   description: Everything directly under Hyperfluid Solutions
 spec:
   owner: hyperfluid
