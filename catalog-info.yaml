@@ -29,4 +29,5 @@ metadata:
 spec:
   type: url
   targets:
-    - https://github.com/hyperfluid-solutions/hfs/blob/main/catalog-info.yaml # Private catalog sprawl
+    - https://github.com/hyperfluid-solutions/hfs/blob/main/catalog-info.yaml # Private catalog sprawler
+    - https://github.com/hyperfluid-solutions/hyperfluid-site/blob/main/catalog-info.yaml
