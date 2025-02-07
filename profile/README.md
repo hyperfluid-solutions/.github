@@ -41,7 +41,7 @@ We are committed to delivering **high-performance, secure, and user-centric** ap
 
 💻 **Website:** [hyperfluidsolutions.com](https://www.hyperfluidsolutions.com)  
 📩 **Email:** [hello@hyperfluidsolutions.com](mailto:hello@hyperfluidsolutions.com)  
-🔗 **LinkedIn:** [linkedin.com/company/hyperfluidsolutions](https://www.linkedin.com/company/hyperfluidsolutions)  
+🔗 **LinkedIn:** [linkedin.com/company/hyperfluid-solutions](https://www.linkedin.com/company/hyperfluid-solutions)  
 
 ---
 
