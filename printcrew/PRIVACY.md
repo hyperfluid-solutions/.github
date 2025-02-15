@@ -1,8 +1,8 @@
 # Privacy Policy
 
-**Effective Date:** ${TODAY_FORMAL}
+**Effective Date:** 15 February 2025
 
-${APP_NAME} is committed to protecting your privacy. This Privacy Policy explains how we handle your information when you use our app.
+Print Crew is committed to protecting your privacy. This Privacy Policy explains how we handle your information when you use our app.
 
 ## 1. No Data Collection
 
@@ -26,6 +26,6 @@ If any changes are made to this policy, we will update this document accordingly
 
 ## 6. Contact Us
 
-If you have any questions about this Privacy Policy, you can contact us at [${PRIVACY_EMAIL}](mailto:${PRIVACY_EMAIL}).
+If you have any questions about this Privacy Policy, you can contact us at [hello@hyperfluidsolutions.com](mailto:hello@hyperfluidsolutions.com).
 
-By using ${APP_NAME}, you agree to this Privacy Policy.
+By using Print Crew, you agree to this Privacy Policy.

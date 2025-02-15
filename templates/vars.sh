@@ -1,7 +1,9 @@
+#!/usr/bin/env bash
+
 # Sets Environment Variables for template files.
 # 
-# Usage:
-# (source ./vars.sh; target.tpl.md;)
+# Test templates with this command:
+# (source ./vars.sh; envsubst < target.tpl.md > target.appname.md;)
 
 export APP_NAME='replace_me'
 export PRIVACY_EMAIL='replace_me'
