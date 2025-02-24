@@ -85,9 +85,9 @@ Residents of the following **U.S. states** have specific privacy rights under st
 - **Delaware (DPDPA)** requires **age-based opt-in consent** for sensitive data.
 - **Tennessee (TIPA)** adds additional obligations for **data security and risk assessments.**
 
-To exercise these rights, contact us at **[Your Contact Email]** or **[Your Business Phone]**.
+To exercise these rights, contact us at **${EMAIL_US_PRIACY}** or **${PHONE_NUMBER}**.
 
-For **opt-out requests** (e.g., targeted ads, sale of data), visit **[Your Opt-Out Link]**.
+For **opt-out requests** (e.g., targeted ads, sale of data), visit **${OPT_OUT_URL}**.
 
 ---
 
@@ -109,18 +109,18 @@ We do **not** sell your personal data. However, we may share data with:
 ## **7. Changes to This Privacy Policy**
 We may update this Privacy Policy periodically. We will notify you of significant changes via email or through our Service.
 
-_Last updated on [Insert Date]._  
+_Last updated on ${TODAY_FORMAL}._  
 
 ---
 
 ## **8. Contact Information**
 If you have questions about this Privacy Policy, contact us at:  
-📧 **[Your Contact Email]**  
-📍 **[Your Business Address, if applicable]**  
+📧 **${EMAIL_GENERAL}**  
+📍 **${ADDRESS}**  
 
 If you are in the **EU/EEA**, you can contact our **Data Protection Officer (DPO)**:  
-📧 **[DPO Email]**  
+📧 **${EMAIL_EU_PRIVACY}**  
 
 If you are in **California, Colorado, Connecticut, Delaware, Florida, Indiana, Iowa, Kentucky, Maryland, Minnesota, Montana, Nebraska, New Hampshire, New Jersey, Oregon, Rhode Island, Tennessee, Texas, Utah, or Virginia**, you can also contact:  
-📧 **[Your State Privacy Contact Email]**  
-📞 ****  
+📧 **${EMAIL_US_PRIVACY}**  
+📞 **${PHONE_NUMBER}**
