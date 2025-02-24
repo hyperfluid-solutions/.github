@@ -1,7 +1,7 @@
 # **Privacy Policy**
 _Last Updated: ${TODAY_FORMAL}_
 
-**[App Name]** ("we," "our," or "us") respects your privacy and is committed to protecting it. This Privacy Policy explains how we collect, use, store, and share your personal data when you use our **[website/app/service]** (the “Service”).
+**${APP_NAME}** ("we," "our," or "us") respects your privacy and is committed to protecting it. This Privacy Policy explains how we collect, use, store, and share your personal data when you use our **[website/app/service]** (the “Service”).
 
 ---
 
