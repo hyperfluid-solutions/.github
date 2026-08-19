@@ -1,0 +1,174 @@
+# Reusable iOS build/test workflow for the self-hosted Mac mini runners.
+# Source: plan keep-mac-mini-runners-current — downstream enablement.
+#
+# Downstream iOS repos (orgs hyperfluid-solutions / systmms) call this with
+# `uses:` so they don't have to re-implement toolchain pinning, the fail-fast
+# guardrail, or per-job build isolation.
+#
+# ⚠️ THIS FILE IS THE UPSTREAM SOURCE — edit it here, never in the published copy.
+# munhall is private, and GitHub can only resolve a reusable workflow across repos
+# when the defining repo is public. So publish-ci-library.yml mirrors this file to
+# hyperfluid-solutions/.github (public) on every merge to main and moves the `v1`
+# tag. Downstream repos reference that published copy, never this one. The `uses:`
+# refs below are rewritten to the published paths during that mirror, which is why
+# they still name munhall here.
+#
+# Example caller (.github/workflows/ci.yml in a downstream iOS repo):
+#   jobs:
+#     build:
+#       uses: hyperfluid-solutions/.github/.github/workflows/ios-build.yml@v1
+#       with:
+#         scheme: MyApp
+#         workspace: MyApp.xcworkspace
+#         # OS= pins the SIMULATOR RUNTIME — independent of the Xcode pin; it
+#         # must be a runtime installed on the runners (see device-inventory.md).
+#         sim-destination: 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.3'
+name: iOS build (self-hosted)
+
+on:
+  workflow_call:
+    inputs:
+      scheme:
+        description: Xcode scheme to build/test.
+        required: true
+        type: string
+      workspace:
+        description: Path to .xcworkspace (set this OR project).
+        required: false
+        type: string
+        default: ''
+      project:
+        description: Path to .xcodeproj (set this OR workspace).
+        required: false
+        type: string
+        default: ''
+      runner-labels:
+        description: >-
+          JSON array of runner labels to target. Add an `xcode-<ver>` label to
+          pin hardware that has the project's Xcode, and `xctest-capable` for
+          UI/simulator tests (only Jon's mini has a GUI session).
+        required: false
+        type: string
+        default: '["self-hosted","macOS","ARM64"]'
+      sim-destination:
+        description: >-
+          xcodebuild -destination string (always pin OS=). The OS= value is the
+          SIMULATOR RUNTIME, independent of the Xcode pin — it must be a runtime
+          installed on the runners (see device-inventory.md).
+        required: false
+        type: string
+        default: 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.3'
+      require-sim-runtime:
+        description: >-
+          Simulator runtime to assert present, e.g. "iOS 26.3". Leave empty to
+          derive it from the OS= pin in sim-destination (recommended) so drift
+          fails fast at the guardrail instead of at xcodebuild.
+        required: false
+        type: string
+        default: ''
+      min-free-gb:
+        description: Fail early if less than this many GB free on /.
+        required: false
+        type: string
+        default: '30'
+      configuration:
+        description: Build configuration (Debug/Release).
+        required: false
+        type: string
+        default: Debug
+      run-tests:
+        description: Run tests after building. Set false to build only.
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  build:
+    runs-on: ${{ fromJSON(inputs.runner-labels) }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # If the caller didn't assert a runtime, derive it from the destination's
+      # OS= pin so runtime drift fails at the guardrail with an actionable
+      # message instead of xcodebuild's cryptic "Unable to find a destination".
+      - name: Derive required simulator runtime
+        id: sim
+        shell: bash
+        env:
+          REQUIRE: ${{ inputs.require-sim-runtime }}
+          DESTINATION: ${{ inputs.sim-destination }}
+        run: |
+          set -euo pipefail
+          req="$REQUIRE"
+          if [[ -z "$req" && "$DESTINATION" == *"iOS Simulator"* \
+                && "$DESTINATION" =~ OS=([0-9][0-9.]*) ]]; then
+            req="iOS ${BASH_REMATCH[1]}"
+          fi
+          echo "require=$req" >> "$GITHUB_OUTPUT"
+
+      # Fail fast on toolchain drift; exports DEVELOPER_DIR for later steps.
+      - name: Verify Xcode + environment
+        uses: hyperfluid-solutions/.github/actions/verify-xcode-version@v1
+        with:
+          require-sim-runtime: ${{ steps.sim.outputs.require }}
+          min-free-gb: ${{ inputs.min-free-gb }}
+
+      # Per-job DerivedData + SPM dirs so concurrent jobs on the shared host
+      # never collide in the global ~/Library cache. All inputs flow through
+      # env vars (never interpolated into the shell) to avoid command injection.
+      - name: Build for testing
+        shell: bash
+        env:
+          WORKSPACE: ${{ inputs.workspace }}
+          PROJECT: ${{ inputs.project }}
+          SCHEME: ${{ inputs.scheme }}
+          CONFIGURATION: ${{ inputs.configuration }}
+          DESTINATION: ${{ inputs.sim-destination }}
+        run: |
+          set -euo pipefail
+          args=()
+          if [[ -n "$WORKSPACE" ]]; then
+            args+=(-workspace "$WORKSPACE")
+          elif [[ -n "$PROJECT" ]]; then
+            args+=(-project "$PROJECT")
+          else
+            echo "::error::Set either 'workspace' or 'project' input."
+            exit 1
+          fi
+          xcodebuild "${args[@]}" \
+            -scheme "$SCHEME" \
+            -configuration "$CONFIGURATION" \
+            -destination "$DESTINATION" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData-$GITHUB_RUN_ID" \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SPM-$GITHUB_RUN_ID" \
+            build-for-testing
+
+      - name: Test without building
+        if: ${{ inputs.run-tests }}
+        shell: bash
+        env:
+          WORKSPACE: ${{ inputs.workspace }}
+          PROJECT: ${{ inputs.project }}
+          SCHEME: ${{ inputs.scheme }}
+          CONFIGURATION: ${{ inputs.configuration }}
+          DESTINATION: ${{ inputs.sim-destination }}
+        run: |
+          set -euo pipefail
+          args=()
+          if [[ -n "$WORKSPACE" ]]; then
+            args+=(-workspace "$WORKSPACE")
+          else
+            args+=(-project "$PROJECT")
+          fi
+          xcodebuild "${args[@]}" \
+            -scheme "$SCHEME" \
+            -configuration "$CONFIGURATION" \
+            -destination "$DESTINATION" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData-$GITHUB_RUN_ID" \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SPM-$GITHUB_RUN_ID" \
+            test-without-building
+
+      - name: Clean per-job build dirs
+        if: ${{ always() }}
+        shell: bash
+        run: rm -rf "$RUNNER_TEMP/DerivedData-$GITHUB_RUN_ID" "$RUNNER_TEMP/SPM-$GITHUB_RUN_ID" || true

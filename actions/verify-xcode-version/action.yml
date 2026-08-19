@@ -1,0 +1,46 @@
+name: Verify Xcode version
+description: >-
+  Fail-fast guardrail for self-hosted Mac mini iOS runners. Reads the project's
+  .xcode-version pin and ensures the build uses EXACTLY that Xcode (selecting it
+  via DEVELOPER_DIR), so toolchain drift between runners surfaces as a clear
+  error instead of a cryptic Swift compiler failure. Optionally asserts a
+  required iOS simulator runtime is installed.
+  Authored in the private munhall repo and published here by publish-ci-library.yml;
+  edit it upstream.
+
+inputs:
+  xcode-version-file:
+    required: false
+    default: .xcode-version
+    description: Path to the file pinning the project's Xcode version.
+  require-sim-runtime:
+    required: false
+    default: ''
+    description: >-
+      Optional iOS simulator runtime to assert is installed, e.g. "iOS 26.5".
+      Leave empty to skip the simulator check.
+  min-free-gb:
+    required: false
+    default: '0'
+    description: >-
+      Fail the job if less than this many GB are free on /. Guards against
+      full-disk mid-build failures on runners with several side-by-side Xcodes.
+      0 (default) skips the check.
+  auto-select:
+    required: false
+    default: 'true'
+    description: >-
+      When true, exports DEVELOPER_DIR pointing at the pinned Xcode so all
+      subsequent steps in the job build against it.
+
+runs:
+  using: composite
+  steps:
+    - name: Verify Xcode version
+      shell: bash
+      env:
+        XCODE_VERSION_FILE: ${{ inputs.xcode-version-file }}
+        REQUIRE_SIM_RUNTIME: ${{ inputs.require-sim-runtime }}
+        AUTO_SELECT: ${{ inputs.auto-select }}
+        MIN_FREE_GB: ${{ inputs.min-free-gb }}
+      run: "${{ github.action_path }}/verify-xcode.sh"

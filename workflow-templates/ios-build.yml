@@ -1,0 +1,31 @@
+# Starter workflow: build & test an iOS app on the homelab self-hosted Mac mini
+# runners. It calls a shared reusable workflow that handles Xcode pinning
+# (.xcode-version), the fail-fast preflight guardrail, and per-job build isolation,
+# so this caller stays small.
+#
+# Before first run: commit a `.xcode-version` file pinning your Xcode (e.g.
+# `echo 26.6 > .xcode-version`) and edit `scheme`/`workspace` below.
+#
+# NOTE (upstream source): this template is authored in the private munhall repo and
+# mirrored into each org's `.github` repo by publish-ci-library.yml — GitHub only
+# surfaces starter workflows from an org's own `.github` repo. Edit it upstream.
+# The `uses:` ref below is rewritten to the published path during that mirror.
+name: iOS CI
+
+on:
+  push:
+    branches: ["$default-branch"]
+  pull_request:
+
+jobs:
+  ios:
+    uses: hyperfluid-solutions/.github/.github/workflows/ios-build.yml@v1
+    with:
+      scheme: MyApp
+      workspace: MyApp.xcworkspace
+      # project: MyApp.xcodeproj        # use instead of workspace if no workspace
+      # OS= is the SIMULATOR RUNTIME — independent of the Xcode pin; must be a
+      # runtime installed on the runners (see device-inventory.md).
+      sim-destination: 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.3'
+      min-free-gb: '30'
+      run-tests: true

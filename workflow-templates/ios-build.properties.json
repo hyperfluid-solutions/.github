@@ -1,0 +1,7 @@
+{
+  "name": "iOS build (self-hosted Mac mini runners)",
+  "description": "Build & test an iOS app on the homelab Mac mini runners with Xcode pinning and a fail-fast toolchain guardrail.",
+  "iconName": "ios-build",
+  "categories": ["iOS", "Swift", "macOS", "Continuous integration"],
+  "filePatterns": [".xcode-version", "**/*.xcodeproj/project.pbxproj", "Package.swift"]
+}

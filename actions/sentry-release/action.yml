@@ -1,0 +1,97 @@
+name: Sentry release
+description: >-
+  Creates a Sentry release for the self-hosted Sentry instance at
+  sentry.hyperfluid.dev. Supports both GitHub-hosted runners (via Cloudflare
+  Access service tokens) and self-hosted homelab runners on the internal
+  network.
+  Authored in the private munhall repo and published here by publish-ci-library.yml;
+  edit it upstream.
+
+inputs:
+  project:
+    required: true
+    description: Sentry project slug (must match the project in the Sentry UI).
+  version:
+    required: true
+    description: >-
+      Release version. Typically the release-please tag_name (e.g.,
+      "walkingpad-bridge-v0.3.1") or a git tag.
+  environment:
+    required: false
+    default: production
+    description: Sentry environment (production, staging, dev).
+  sourcemaps-dir:
+    required: false
+    default: ''
+    description: >-
+      Directory containing sourcemaps to upload. Leave empty to skip
+      sourcemap upload (e.g., for Python services).
+  sourcemaps-url-prefix:
+    required: false
+    default: '~/'
+    description: >-
+      URL prefix where the JS bundles are served at runtime. Must match
+      stack trace frame URLs or symbolication fails silently.
+  cf-access-client-id:
+    required: false
+    default: ''
+    description: >-
+      Cloudflare Access service token client ID. Required when running on a
+      GitHub-hosted runner or any runner that doesn't have split-DNS to the
+      internal Sentry tunnel ingress. Omit on homelab runners with direct
+      LAN access.
+  cf-access-client-secret:
+    required: false
+    default: ''
+    description: Companion to cf-access-client-id. Mark as a workflow secret.
+  sentry-url:
+    required: false
+    default: https://sentry.hyperfluid.dev/
+    description: >-
+      Sentry management URL. The SDK ingestion relay
+      (relay.hyperfluid.dev) does NOT serve the management API, so
+      sentry-cli must hit the canonical hostname.
+  sentry-org:
+    required: false
+    default: hyperfluid
+    description: Sentry organization slug.
+
+runs:
+  using: composite
+  steps:
+    - name: Validate environment
+      shell: bash
+      run: |
+        if [ -z "${SENTRY_AUTH_TOKEN:-}" ]; then
+          echo "::error::SENTRY_AUTH_TOKEN env var is required (set it in the calling job's env: block from secrets)"
+          exit 1
+        fi
+        if [ -n "${{ inputs.cf-access-client-id }}" ] && [ -z "${{ inputs.cf-access-client-secret }}" ]; then
+          echo "::error::cf-access-client-id set but cf-access-client-secret is empty"
+          exit 1
+        fi
+
+    - name: Configure Cloudflare Access headers
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.cf-access-client-id }}" ]; then
+          # sentry-cli reads SENTRY_HEADER_* env vars and applies them as HTTP headers.
+          echo "::add-mask::${{ inputs.cf-access-client-secret }}"
+          echo "SENTRY_HEADER_CF_ACCESS_CLIENT_ID=${{ inputs.cf-access-client-id }}" >> "$GITHUB_ENV"
+          echo "SENTRY_HEADER_CF_ACCESS_CLIENT_SECRET=${{ inputs.cf-access-client-secret }}" >> "$GITHUB_ENV"
+          echo "Cloudflare Access service-token auth enabled"
+        else
+          echo "Cloudflare Access headers skipped (assuming internal-network runner)"
+        fi
+
+    - name: Create Sentry release
+      uses: getsentry/action-release@v3
+      with:
+        environment: ${{ inputs.environment }}
+        version: ${{ inputs.version }}
+        projects: ${{ inputs.project }}
+        sourcemaps: ${{ inputs.sourcemaps-dir }}
+        url_prefix: ${{ inputs.sourcemaps-url-prefix }}
+      env:
+        SENTRY_ORG: ${{ inputs.sentry-org }}
+        SENTRY_URL: ${{ inputs.sentry-url }}
