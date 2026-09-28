@@ -53,36 +53,63 @@ inputs:
       sentry-cli must hit the canonical hostname.
   sentry-org:
     required: false
-    default: hyperfluid
-    description: Sentry organization slug.
+    default: hfs
+    description: >-
+      Sentry organization slug. The self-hosted instance's org is `hfs` (not
+      "hyperfluid" — a wrong slug surfaces as a misleading "Project not found").
 
 runs:
   using: composite
   steps:
+    # Inputs reach the shell through env:, never ${{ }} inside run: — an inlined
+    # value is spliced into the script text before bash parses it.
     - name: Validate environment
       shell: bash
+      env:
+        CF_ID: ${{ inputs.cf-access-client-id }}
+        CF_SECRET: ${{ inputs.cf-access-client-secret }}
       run: |
         if [ -z "${SENTRY_AUTH_TOKEN:-}" ]; then
           echo "::error::SENTRY_AUTH_TOKEN env var is required (set it in the calling job's env: block from secrets)"
           exit 1
         fi
-        if [ -n "${{ inputs.cf-access-client-id }}" ] && [ -z "${{ inputs.cf-access-client-secret }}" ]; then
+        if [ -n "$CF_ID" ] && [ -z "$CF_SECRET" ]; then
           echo "::error::cf-access-client-id set but cf-access-client-secret is empty"
           exit 1
         fi
-
-    - name: Configure Cloudflare Access headers
-      shell: bash
-      run: |
-        if [ -n "${{ inputs.cf-access-client-id }}" ]; then
-          # sentry-cli reads SENTRY_HEADER_* env vars and applies them as HTTP headers.
-          echo "::add-mask::${{ inputs.cf-access-client-secret }}"
-          echo "SENTRY_HEADER_CF_ACCESS_CLIENT_ID=${{ inputs.cf-access-client-id }}" >> "$GITHUB_ENV"
-          echo "SENTRY_HEADER_CF_ACCESS_CLIENT_SECRET=${{ inputs.cf-access-client-secret }}" >> "$GITHUB_ENV"
-          echo "Cloudflare Access service-token auth enabled"
-        else
-          echo "Cloudflare Access headers skipped (assuming internal-network runner)"
+        if [ -z "$CF_ID" ] && [ -n "$CF_SECRET" ]; then
+          echo "::error::cf-access-client-secret set but cf-access-client-id is empty"
+          exit 1
         fi
+        # Service-token IDs and secrets are hex (the ID ends in .access). Anything
+        # else is a wrong secret — and a newline would inject lines into GITHUB_ENV.
+        for v in "$CF_ID" "$CF_SECRET"; do
+          if [ -n "$v" ] && ! [[ "$v" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "::error::cf-access-client-id/secret contains unexpected characters — check the secret values"
+            exit 1
+          fi
+        done
+
+    - name: Configure Cloudflare Access header
+      shell: bash
+      env:
+        CF_ID: ${{ inputs.cf-access-client-id }}
+        CF_SECRET: ${{ inputs.cf-access-client-secret }}
+      run: |
+        if [ -z "$CF_ID" ]; then
+          echo "Cloudflare Access header skipped (assuming internal-network runner)"
+          exit 0
+        fi
+        # sentry-cli sends exactly ONE custom header taken from the environment
+        # (CUSTOM_HEADER, "Name:value"); it has no SENTRY_HEADER_* support, and
+        # multiple headers need repeated --header flags, which action-release cannot
+        # pass. So the Sentry Access app accepts the service token as a single JSON
+        # header (read_service_tokens_from_header in systems/network/iac/main.tf)
+        # instead of the CF-Access-Client-Id / CF-Access-Client-Secret pair.
+        token_json=$(printf '{"cf-access-client-id":"%s","cf-access-client-secret":"%s"}' "$CF_ID" "$CF_SECRET")
+        echo "::add-mask::$token_json"
+        echo "CUSTOM_HEADER=cf-access-token:$token_json" >> "$GITHUB_ENV"
+        echo "Cloudflare Access service-token header enabled"
 
     - name: Create Sentry release
       uses: getsentry/action-release@v3
