@@ -100,16 +100,30 @@ runs:
           echo "Cloudflare Access header skipped (assuming internal-network runner)"
           exit 0
         fi
-        # sentry-cli sends exactly ONE custom header taken from the environment
-        # (CUSTOM_HEADER, "Name:value"); it has no SENTRY_HEADER_* support, and
-        # multiple headers need repeated --header flags, which action-release cannot
-        # pass. So the Sentry Access app accepts the service token as a single JSON
-        # header (read_service_tokens_from_header in systems/network/iac/main.tf)
-        # instead of the CF-Access-Client-Id / CF-Access-Client-Secret pair.
-        token_json=$(printf '{"cf-access-client-id":"%s","cf-access-client-secret":"%s"}' "$CF_ID" "$CF_SECRET")
-        echo "::add-mask::$token_json"
-        echo "CUSTOM_HEADER=cf-access-token:$token_json" >> "$GITHUB_ENV"
-        echo "Cloudflare Access service-token header enabled"
+        # This path has no working implementation yet — fail loudly rather than run
+        # a release that is guaranteed to die at the Access edge with a misleading
+        # "Project not found".
+        #
+        # sentry-cli takes exactly ONE custom header from the environment
+        # (CUSTOM_HEADER, "Name:value") and has no SENTRY_HEADER_* support, so the
+        # two-header service-token pair cannot be passed through the environment.
+        # The single-JSON-header alternative is also out: Cloudflare only permits
+        # `read_service_tokens_from_header = "Authorization"` (400, code 12130), and
+        # sentry-cli needs Authorization itself for `Bearer $SENTRY_AUTH_TOKEN`.
+        #
+        # The fix is to stop using getsentry/action-release here and invoke
+        # sentry-cli directly, which accepts repeated --header flags:
+        #   sentry-cli releases new "$V" \
+        #     --header "CF-Access-Client-Id: $CF_ID" \
+        #     --header "CF-Access-Client-Secret: $CF_SECRET"
+        # plus set-commits / sourcemaps upload / finalize. Until then, only
+        # LAN runners (which bypass Access via split DNS) can use this action.
+        msg="cf-access-client-id was supplied, but this action has no working way to"
+        msg="$msg send the service token — see the comment in this action. Either run on"
+        msg="$msg a homelab LAN runner and omit the cf-access-* inputs, or call sentry-cli"
+        msg="$msg directly with repeated --header flags."
+        echo "::error title=sentry-release cannot traverse Cloudflare Access::$msg"
+        exit 1
 
     - name: Create Sentry release
       uses: getsentry/action-release@v3
